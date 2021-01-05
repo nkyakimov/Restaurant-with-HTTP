@@ -30,17 +30,8 @@ public class AccountDataBase {
         } catch (FileNotFoundException e) {
             System.out.println("AccountDB loaded with new file");
             usernameAndPasswords = new ConcurrentHashMap<>();
-        } catch (InvalidClassException e) {
+        } catch (ClassNotFoundException | IOException e) {
             e.printStackTrace();
-            usernameAndPasswords = new ConcurrentHashMap<>();
-            throw new DataBaseCreationException("Invalid Class Cast");
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-            usernameAndPasswords = new ConcurrentHashMap<>();
-            throw new DataBaseCreationException("Class Cast not found");
-        } catch (IOException e) {
-            e.printStackTrace();
-            usernameAndPasswords = new ConcurrentHashMap<>();
         }
     }
 
