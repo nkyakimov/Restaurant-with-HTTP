@@ -1,0 +1,161 @@
+[ {
+  "id" : "22",
+  "foodName" : "Sushi Combo Veggie",
+  "price" : 8.99,
+  "type" : "Sushi"
+}, {
+  "id" : "23",
+  "foodName" : "Sakura Combo",
+  "price" : 18.99,
+  "type" : "Sushi"
+}, {
+  "id" : "24",
+  "foodName" : "Everyday Combo",
+  "price" : 14.99,
+  "type" : "Sushi"
+}, {
+  "id" : "25",
+  "foodName" : "Sexy Combo",
+  "price" : 24.89,
+  "type" : "Sushi"
+}, {
+  "id" : "26",
+  "foodName" : "Philadelphia Combo",
+  "price" : 22.99,
+  "type" : "Sushi"
+}, {
+  "id" : "27",
+  "foodName" : "Wabi-Sabi Combo",
+  "price" : 18.99,
+  "type" : "Sushi"
+}, {
+  "id" : "28",
+  "foodName" : "Osaka Combo",
+  "price" : 19.99,
+  "type" : "Sushi"
+}, {
+  "id" : "29",
+  "foodName" : "Nagiri Classic",
+  "price" : 24.49,
+  "type" : "Sushi"
+}, {
+  "id" : "223a",
+  "foodName" : "Pizza Oliveti Small",
+  "price" : 8.99,
+  "type" : "Pizza"
+}, {
+  "id" : "51",
+  "foodName" : "Pizza Olivetti",
+  "price" : 8.99,
+  "type" : "Pizza"
+}, {
+  "id" : "10",
+  "foodName" : "Lemonade 0.5L Special",
+  "price" : 4.99,
+  "type" : "Drink"
+}, {
+  "id" : "11",
+  "foodName" : "Smoky Combo",
+  "price" : 9.99,
+  "type" : "Sushi"
+}, {
+  "id" : "12",
+  "foodName" : "Happy Sushi Combo",
+  "price" : 34.99,
+  "type" : "Sushi"
+}, {
+  "id" : "13",
+  "foodName" : "Samurai Combo",
+  "price" : 9.99,
+  "type" : "Sushi"
+}, {
+  "id" : "14",
+  "foodName" : "Best Seller",
+  "price" : 24.99,
+  "type" : "Sushi"
+}, {
+  "id" : "15",
+  "foodName" : "Ninja Combo",
+  "price" : 24.99,
+  "type" : "Sushi"
+}, {
+  "id" : "16",
+  "foodName" : "Salmon Combo",
+  "price" : 26.99,
+  "type" : "Sushi"
+}, {
+  "id" : "17",
+  "foodName" : "Kikoman",
+  "price" : 16.99,
+  "type" : "Sushi"
+}, {
+  "id" : "18",
+  "foodName" : "Yakudza",
+  "price" : 24.49,
+  "type" : "Sushi"
+}, {
+  "id" : "19",
+  "foodName" : "Paradise Combo",
+  "price" : 23.49,
+  "type" : "Sushi"
+}, {
+  "id" : "1",
+  "foodName" : "Water 0.5L",
+  "price" : 1.19,
+  "type" : "Drink"
+}, {
+  "id" : "221",
+  "foodName" : "Smoky Combo",
+  "price" : 9.99,
+  "type" : "Sushi"
+}, {
+  "id" : "2",
+  "foodName" : "Water 1.5L",
+  "price" : 2.29,
+  "type" : "Drink"
+}, {
+  "id" : "3",
+  "foodName" : "Coca Cola 0.3L",
+  "price" : 1.19,
+  "type" : "Drink"
+}, {
+  "id" : "4",
+  "foodName" : "Fanta 0.3L",
+  "price" : 1.19,
+  "type" : "Drink"
+}, {
+  "id" : "5",
+  "foodName" : "Sprite 0.3L",
+  "price" : 1.19,
+  "type" : "Drink"
+}, {
+  "id" : "6",
+  "foodName" : "Coca Cola 0.5L",
+  "price" : 1.89,
+  "type" : "Drink"
+}, {
+  "id" : "7",
+  "foodName" : "Fanta 0.5L",
+  "price" : 1.89,
+  "type" : "Drink"
+}, {
+  "id" : "8",
+  "foodName" : "Sprite 0.5L",
+  "price" : 1.89,
+  "type" : "Drink"
+}, {
+  "id" : "9",
+  "foodName" : "Lemonade 0.5L",
+  "price" : 3.99,
+  "type" : "Drink"
+}, {
+  "id" : "20",
+  "foodName" : "Combo Volkano",
+  "price" : 19.89,
+  "type" : "Sushi"
+}, {
+  "id" : "21",
+  "foodName" : "Sushi Classic Combo",
+  "price" : 12.99,
+  "type" : "Sushi"
+} ]
