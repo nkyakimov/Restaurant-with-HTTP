@@ -16,7 +16,7 @@ public class ActiveAccount implements Serializable {
 
     public ActiveAccount(String username) {
         this.username = username;
-        this.tables = new ConcurrentHashMap<>();
+        tables = new ConcurrentHashMap<>();
         notifications = new ArrayList<>();
     }
 
@@ -28,7 +28,7 @@ public class ActiveAccount implements Serializable {
 
     public List<String> getNotifications() {
         synchronized (notifications) {
-            var answer = new ArrayList<>(notifications);
+            List<String> answer = new ArrayList<>(notifications);
             notifications.clear();
             return answer;
         }

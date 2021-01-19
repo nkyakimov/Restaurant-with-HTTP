@@ -5,6 +5,7 @@ import restaurant.storage.Product;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -17,6 +18,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Table implements Serializable {
+    @Serial
     private static final long serialVersionUID = 2506;
     private final int id;
     private final Map<Product, Integer> tableProducts;
@@ -48,13 +50,7 @@ public class Table implements Serializable {
         return "{" + "id = " + id + ", tableProducts = " + tableProducts + '}';
     }
 
-    /*
-        private Map<ProductForDevice, Integer> toDevice() {
-            return tableProducts.entrySet().stream().collect(Collectors.toMap(i -> new ProductForDevice(i.getKey()),
-                    Map.Entry::getValue));
-        }
-    */
-    public void removeProduct(Product i) {
+    public boolean removeProduct(Product i) {
         int count;
         try {
             if ((count = tableProducts.get(i)) > 1) {
@@ -62,13 +58,14 @@ public class Table implements Serializable {
             } else {
                 tableProducts.remove(i);
             }
+            return true;
         } catch (NullPointerException e) {
-            System.err.println("Cannot remove this product");
+            return false;
         }
     }
 
     private double getTotal() {
-        var total = tableProducts.keySet().stream()
+        double total = tableProducts.keySet().stream()
                 .mapToDouble(i -> i.getPrice() * tableProducts.get(i))
                 .sum();
         BigDecimal bd = BigDecimal.valueOf(total);
@@ -78,47 +75,51 @@ public class Table implements Serializable {
 
     public void bill(String restaurantName, String filepath) {
         DecimalFormat df = new DecimalFormat("#.##");
-        if (Files.notExists(Paths.get(filepath))) {
-            try {
-                Files.createDirectory(Paths.get(filepath));
-            } catch (IOException e) {
-                throw new RuntimeException("Cannot create bill directory");
-            }
-        }
-        String billPath = filepath + File.separator
-                + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy  HH_mm"));
+        DateTimeFormatter dateTimeFormat = DateTimeFormatter.ofPattern("dd-MM-yy HH_mm");
+        checkBillDirectory(filepath);
+        String billPath = filepath + File.separator + "table " + id + " " + LocalDateTime.now().format(dateTimeFormat);
         int i = 1;
         while (true) {
-            String newPath = billPath + "_(" + i + ").txt";
+            String newPath = billPath + "(" + i + ").txt";
             File bill = new File(newPath);
             try {
                 if (bill.createNewFile()) {
                     FileWriter fw = new FileWriter(newPath, false);
-                    fw.append("-- ").append(restaurantName).append(" --").append(System.lineSeparator());
-                    tableProducts.keySet().forEach(product -> printProduct(product, fw));
-                    fw.append("\t\t Total: ").append(df.format(getTotal())).append(System.lineSeparator());
-                    fw.append("---------------------");
+                    printBill(fw, restaurantName, df);
                     fw.close();
                     break;
                 }
             } catch (IOException e) {
-                System.err.println("Cannot create bill");
+                e.printStackTrace();
                 return;
             }
             i++;
         }
     }
 
-    private void printProduct(Product product, FileWriter fw) {
-        try {
-            fw.append(product.toBill())
-                    .append(" x")
-                    .append(String.valueOf((int) tableProducts.get(product)))
-                    .append(System.lineSeparator())
-                    .append("\t\t\t")
-                    .append(String.valueOf(product.getPrice() * tableProducts.get(product)))
-                    .append(System.lineSeparator());
-        } catch (IOException ignored) {
+    private void printBill(FileWriter fw, String restaurantName, DecimalFormat df) throws IOException {
+        fw.append("--- ").append(restaurantName).append(" ---").append(System.lineSeparator());
+        for (Product product : tableProducts.keySet()) {
+            printProduct(product, fw);
         }
+        fw.append("\t\t Total: ").append(df.format(getTotal())).append(System.lineSeparator());
+        fw.append("---------------------");
+    }
+
+    private void checkBillDirectory(String filepath) {
+        if (Files.notExists(Paths.get(filepath))) {
+            try {
+                Files.createDirectory(Paths.get(filepath));
+            } catch (IOException e) {
+                throw new RuntimeException("Cannot create bill directory", e);
+            }
+        }
+    }
+
+    private void printProduct(Product product, FileWriter fw) throws IOException {
+        fw.append(product.toBill()).append(" x").append(String.valueOf((int) tableProducts.get(product)))
+                .append(System.lineSeparator()).append("\t\t\t")
+                .append(String.valueOf(product.getPrice() * tableProducts.get(product)))
+                .append(System.lineSeparator());
     }
 }

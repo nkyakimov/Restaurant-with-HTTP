@@ -3,40 +3,49 @@ package restaurant.storage;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
+import restaurant.exceptions.ProductDataBaseFileException;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.stream.Collectors;
 
 public class ProductDataBase {
     private static final String SUCCESS = "ProductDB successfully loaded";
-    private static final String ERROR_UPDATE = "Error updating productDB";
     private final String productDBLocation;
-    private final List<String> allTypes;
     private final Map<String, Product> products;
+    private Set<String> allTypes;
 
     public ProductDataBase(String productDBLocation) {
-        allTypes = new ArrayList<>();
+        allTypes = new ConcurrentSkipListSet<>();
         this.productDBLocation = productDBLocation;
-        if ((products = fromJSON()) == null) {
-            throw new RuntimeException("Cannot load PDB");
+        Map<String, Product> productMap = new ConcurrentHashMap<>();
+        try {
+            if ((productMap = fromJSON()) == null) {
+                throw new RuntimeException("Cannot load PDB");
+            } else {
+                System.out.println(SUCCESS);
+            }
+        }finally {
+            products = productMap;
         }
         calculateAllTypes();
-        toJSON();
-        System.out.println(SUCCESS);
     }
 
     private void calculateAllTypes() {
-        allTypes.addAll(products.values().stream().map(Product::getType).distinct().collect(Collectors.toList()));
+        allTypes =
+                products.values().stream().map(Product::getType)
+                        .collect(Collectors.toCollection(ConcurrentSkipListSet::new));
     }
 
-    public List<String> getAllTypes() {
+    public Collection<String> getAllTypes() {
         return allTypes;
     }
 
@@ -52,34 +61,35 @@ public class ProductDataBase {
     }
 
     public boolean addProduct(Product p) {
-        if (products.containsKey(p.getId())) {
-            return false;
-        } else {
-            products.put(p.getId(), p);
+        try {
+            if (products.containsKey(p.getId())) {
+                return false;
+            } else {
+                products.put(p.getId(), p);
+                return true;
+            }
+        } finally {
             toJSON();
-            return true;
+            calculateAllTypes();
         }
     }
 
     public boolean removeProduct(String id) {
-        Product toRemove = products.remove(id);
-        if (toRemove == null) {
-            return false;
-        } else {
+        try {
+            return products.remove(id) != null;
+        } finally {
             toJSON();
-            return true;
+            calculateAllTypes();
         }
     }
 
     private void toJSON() {
         ObjectMapper mapper = new ObjectMapper();
+        mapper.enable(SerializationFeature.INDENT_OUTPUT);
         try {
-            mapper.enable(SerializationFeature.INDENT_OUTPUT);
-            mapper.writeValue(new File(productDBLocation),
-                    products.values());
+            mapper.writeValue(new File(productDBLocation), products.values());
         } catch (IOException e) {
-            System.err.println(ERROR_UPDATE);
-            System.err.println(e.getMessage());
+            throw new ProductDataBaseFileException("Error writing file", e);
         }
     }
 
@@ -89,31 +99,15 @@ public class ProductDataBase {
             return mapper.readValue(new File(productDBLocation), new TypeReference<List<Product>>() {
             })
                     .stream().collect(Collectors.toConcurrentMap(Product::getId, product -> product));
-        } catch (IOException e) {
-            System.err.println(e.getMessage());
-            return null;
+        }catch (MismatchedInputException e) {
+            return new ConcurrentHashMap();
+        }catch (IOException e) {
+            throw new ProductDataBaseFileException("Error reading file", e);
         }
     }
 
-    private boolean createDemoProductDB() {
-        File file = new File(productDBLocation);
-        try {
-            if (file.createNewFile()) {
-                products.clear();
-                var oos = new ObjectOutputStream(new FileOutputStream(productDBLocation));
-                oos.writeObject(products);
-                return true;
-            } else {
-                return false;
-            }
-        } catch (IOException e) {
-            file.deleteOnExit();
-            return false;
-        }
-    }
-
-    public Product getProduct(String i) {
-        return products.get(i);
+    public Product getProduct(String id) {
+        return products.get(id);
     }
 
     public List<Product> allMatch(String data) {
@@ -125,16 +119,17 @@ public class ProductDataBase {
                 .collect(Collectors.toList());
     }
 
-    public void print() {
-        products.forEach((k, v) -> System.out.println(k + " " + v.getFoodName() + " " + v.getPrice()));
-    }
-
     public boolean changeProduct(Product product) {
-        if (!products.containsKey(product.getId())) {
-            return false;
-        } else {
-            products.replace(product.getId(), product);
-            return true;
+        try {
+            if (!products.containsKey(product.getId())) {
+                return false;
+            } else {
+                products.replace(product.getId(), product);
+                return true;
+            }
+        } finally {
+            toJSON();
+            calculateAllTypes();
         }
     }
 }

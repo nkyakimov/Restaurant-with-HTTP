@@ -37,23 +37,21 @@ public class TypeHandler implements HttpHandler {
     private void getProductsByType(HttpExchange exchange) throws IOException {
         var mapper = new ObjectMapper();
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
-        var writer = new BufferedOutputStream(exchange.getResponseBody());
-        var arr = mapper.writeValueAsBytes(
+        BufferedOutputStream writer = new BufferedOutputStream(exchange.getResponseBody());
+        byte[] arr = mapper.writeValueAsBytes(
                 pdb.getProductsByTypes(Arrays.asList(exchange.getRequestURI().getQuery().split(" *: *"))));
         exchange.sendResponseHeaders(arr.length > 0 ? 200 : 400, arr.length);
         writer.write(arr);
-        writer.flush();
         writer.close();
     }
 
     private void get(HttpExchange exchange) throws IOException {
         var mapper = new ObjectMapper();
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
-        var writer = new BufferedOutputStream(exchange.getResponseBody());
-        var arr = mapper.writeValueAsBytes(pdb.getAllTypes());
+        BufferedOutputStream writer = new BufferedOutputStream(exchange.getResponseBody());
+        byte[] arr = mapper.writeValueAsBytes(pdb.getAllTypes());
         exchange.sendResponseHeaders(arr.length > 0 ? 200 : 400, arr.length);
         writer.write(arr);
-        writer.flush();
         writer.close();
     }
 }

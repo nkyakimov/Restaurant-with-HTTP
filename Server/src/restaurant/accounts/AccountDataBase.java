@@ -1,16 +1,14 @@
 package restaurant.accounts;
 
 import restaurant.accounts.pair.Pair;
-import restaurant.exceptions.CantCreateFile;
-import restaurant.exceptions.DataBaseCreationException;
-import restaurant.exceptions.UserAlreadyThereException;
+import restaurant.exceptions.AccountDataBaseFileException;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InvalidClassException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.List;
@@ -22,26 +20,21 @@ public class AccountDataBase {
     private final String location;
     private Map<String, Pair> usernameAndPasswords;
 
-    public AccountDataBase(String accountDataBaseLocation) throws DataBaseCreationException {
+    public AccountDataBase(String accountDataBaseLocation) throws AccountDataBaseFileException {
         location = accountDataBaseLocation;
         try {
             ObjectInputStream ois = new ObjectInputStream(new FileInputStream(location));
             usernameAndPasswords = (ConcurrentHashMap<String, Pair>) ois.readObject();
-        } catch (FileNotFoundException e) {
+        } catch (FileNotFoundException | EOFException e) {
             System.out.println("AccountDB loaded with new file");
             usernameAndPasswords = new ConcurrentHashMap<>();
         } catch (ClassNotFoundException | IOException e) {
-            e.printStackTrace();
+            throw new AccountDataBaseFileException("Error in reading accountDB file", e);
         }
     }
 
-    public void print() {
-        for (Map.Entry<String, Pair> i : usernameAndPasswords.entrySet()) {
-            System.out.println(i.getKey() + " " + i.getValue());
-        }
-    }
 
-    public boolean changeStatus(String username) {
+    public boolean changeStatus(String username) throws AccountDataBaseFileException {
         if (usernameAndPasswords.containsKey(username)) {
             usernameAndPasswords.get(username).shiftAdmin();
             update();
@@ -51,7 +44,8 @@ public class AccountDataBase {
         }
     }
 
-    public boolean changePassword(String username, String oldPassword, String newPassword) {
+    public boolean changePassword(String username, String oldPassword, String newPassword)
+            throws AccountDataBaseFileException {
         if (oldPassword.indexOf(':') != -1 || newPassword.indexOf(':') != -1) {
             return false;
         }
@@ -68,15 +62,13 @@ public class AccountDataBase {
         }
     }
 
-    public void addUser(String username, String password, boolean admin) throws UserAlreadyThereException {
-        if (password.indexOf(':') != -1) {
-            throw new IllegalArgumentException("Password can't contain :");
-        }
-        if (usernameAndPasswords.get(username) != null) {
-            throw new UserAlreadyThereException("User with name " + username + " already registered");
+    public boolean addUser(String username, String password, boolean admin) throws AccountDataBaseFileException {
+        if (password.indexOf(':') != -1 || usernameAndPasswords.containsKey(username)) {
+            return false;
         } else {
             usernameAndPasswords.put(username, new Pair(password, admin));
             update();
+            return true;
         }
     }
 
@@ -97,32 +89,26 @@ public class AccountDataBase {
         }
     }
 
-    public synchronized void update() {
+    public synchronized void update() throws AccountDataBaseFileException {
         try {
-            var oos = new ObjectOutputStream(new FileOutputStream(location));
+            ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(location));
             oos.writeObject(usernameAndPasswords);
             oos.close();
         } catch (FileNotFoundException e) {
-            try {
-                if (createNewADB(location)) {
-                    update();
-                }
-            } catch (CantCreateFile c) {
-                throw new RuntimeException("Error when creating accountDb");
+            if (createNewADB(location)) {
+                update();
+            } else {
+                throw new AccountDataBaseFileException("Error when creating accountDb", e);
             }
         } catch (IOException e) {
-            throw new RuntimeException("Error when updating accountDb");
+            throw new AccountDataBaseFileException("Error when updating accountDb", e);
         }
     }
 
-    private boolean createNewADB(String location) throws CantCreateFile {
+    private boolean createNewADB(String location) {
         File newABD = new File(location);
         try {
-            if (!newABD.createNewFile()) {
-                throw new CantCreateFile("Cannot create file for accountDB");
-            } else {
-                return true;
-            }
+            return newABD.createNewFile();
         } catch (IOException e) {
             return false;
         } finally {
@@ -130,11 +116,7 @@ public class AccountDataBase {
         }
     }
 
-    public void clear() {
-        usernameAndPasswords.clear();
-    }
-
-    public boolean removeUser(String username) {
+    public boolean removeUser(String username) throws AccountDataBaseFileException {
         try {
             return usernameAndPasswords.remove(username) != null;
         } finally {

@@ -18,7 +18,7 @@ public class Product implements Serializable {
     }
 
     public Product() {
-        this(null, null, null, null);
+        this("", "", 0.0, "");
     }
 
     @Override
@@ -30,10 +30,7 @@ public class Product implements Serializable {
             return false;
         }
         Product product = (Product) o;
-        return Objects.equals(id, product.id) &&
-                Objects.equals(foodName, product.foodName) &&
-                Objects.equals(price, product.price) &&
-                Objects.equals(type, product.type);
+        return Objects.equals(id, product.id);
     }
 
     @Override

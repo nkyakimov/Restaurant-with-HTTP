@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import restaurant.accounts.AccountDataBase;
+import restaurant.exceptions.AccountDataBaseFileException;
+import restaurant.intercom.Intercom;
 import restaurant.storage.Product;
 import restaurant.storage.ProductDataBase;
 
@@ -13,7 +15,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -41,39 +42,40 @@ public class AdminHandler implements HttpHandler {
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
-        var auth = exchange.getRequestHeaders().get("Authorization").get(0).split("\\s+")[1];
-        var decoded = new String(Base64.getDecoder().decode(auth));
+        String auth = exchange.getRequestHeaders().get("Authorization").get(0).split("\\s+")[1];
+        String decoded = new String(Base64.getDecoder().decode(auth));
         username = decoded.split(":")[0];
         try {
-            getRequest(exchange);
+            request = Request.getRequest(exchange);
             switch (exchange.getRequestMethod()) {
                 case "GET" -> get(exchange);
                 case "POST" -> post(exchange);
                 case "DELETE" -> delete(exchange);
                 default -> exchange.sendResponseHeaders(400, 0);
             }
-        } catch (Exception e) {
+        } catch (AccountDataBaseFileException e) {
             e.printStackTrace();
+            exchange.sendResponseHeaders(400, 0);
+        } catch (IOException e) {
             exchange.sendResponseHeaders(400, 0);
         } finally {
             exchange.close();
         }
     }
 
-    private void post(HttpExchange exchange) throws Exception {
+    private void post(HttpExchange exchange) throws IOException, AccountDataBaseFileException {
         boolean result = false;
         switch (request.getRequestParam()) {
             case "changePassword" -> {
-                var split = request.getRequestArgs().split(splitter, 3);
+                String[] split = request.getRequestArgs().split(splitter, 3);
                 if (split.length == 3) {
                     result = adb.changePassword(split[0], split[1], split[2]);
                 }
             }
             case "newUser" -> {
-                var split = request.getRequestArgs().split(splitter, 3);
+                String[] split = request.getRequestArgs().split(splitter, 3);
                 if (split.length == 3) {
-                    adb.addUser(split[0], split[1], Boolean.parseBoolean(split[2]));
-                    result = true;
+                    result = adb.addUser(split[0], split[1], Boolean.parseBoolean(split[2]));
                 }
             }
             case "changeProduct" -> result =
@@ -94,23 +96,28 @@ public class AdminHandler implements HttpHandler {
             switch (request.getRequestParam()) {
                 case "deleteTable" -> result = intercom.removeTable(Integer.parseInt(request.getRequestArgs()), true);
                 case "removeFromTable" -> {
-                    var split = request.getRequestArgs().split(splitter);
+                    String[] split = request.getRequestArgs().split(splitter);
                     result = intercom.removeFromTable(Integer.parseInt(split[0]), split[1], true);
                 }
                 case "removeProduct" -> result = pdb.removeProduct(request.getRequestArgs());
                 case "removeAccount" -> {
-                    intercom.removeUser(request.getRequestArgs());
-                    result = adb.removeUser(request.getRequestArgs());
+                    if (!username.equals(request.getRequestArgs())) {
+                        intercom.removeUser(request.getRequestArgs());
+                        result = adb.removeUser(request.getRequestArgs());
+                    }
                 }
             }
-        } catch (IndexOutOfBoundsException | NumberFormatException ignored) {
+        } catch (IndexOutOfBoundsException | NumberFormatException e) {
+            result = false;
+        } catch (AccountDataBaseFileException e) {
+            e.printStackTrace();
             result = false;
         }
-        exchange.sendResponseHeaders(result ? 200 : 400, String.valueOf(result).length());
+        exchange.sendResponseHeaders(result ? 200 : 400, 0);
     }
 
     private void get(HttpExchange exchange) throws IOException {
-        var writer = new BufferedOutputStream(exchange.getResponseBody());
+        BufferedOutputStream writer = new BufferedOutputStream(exchange.getResponseBody());
         byte[] arr = new byte[0];
         switch (request.getRequestParam()) {
             case "tables" -> arr = mapper.writeValueAsBytes(intercom.getTables("", true));
@@ -120,13 +127,12 @@ public class AdminHandler implements HttpHandler {
         }
         exchange.sendResponseHeaders(arr.length > 0 ? 200 : 400, arr.length);
         writer.write(arr);
-        writer.flush();
         writer.close();
     }
 
     private byte[] getBills(String args) throws IOException {
         if (args.equals("ALL") || args.isEmpty()) {
-            var files = new File(billPath).listFiles();
+            File[] files = new File(billPath).listFiles();
             ArrayList<String> bills = null;
             if (files != null) {
                 bills = Arrays.stream(files).map(File::getName).collect(Collectors.toCollection(ArrayList::new));
@@ -135,7 +141,7 @@ public class AdminHandler implements HttpHandler {
         } else {
             File file = new File(billPath + File.separator + args);
             if (file.isFile()) {
-                var reader = new BufferedReader(new FileReader(file));
+                BufferedReader reader = new BufferedReader(new FileReader(file));
                 return mapper.writeValueAsBytes(reader.lines().collect(Collectors.joining(System.lineSeparator())));
             } else {
                 return new byte[0];
@@ -143,12 +149,5 @@ public class AdminHandler implements HttpHandler {
         }
     }
 
-    private void getRequest(HttpExchange exchange) throws Exception {
-        if (exchange.getRequestURI().getQuery() == null) {
-            var reader = new BufferedReader(new InputStreamReader(exchange.getRequestBody()));
-            request = mapper.readValue(reader, Request.class);
-        } else {
-            request = new Request(exchange.getRequestURI().getQuery());
-        }
-    }
+
 }

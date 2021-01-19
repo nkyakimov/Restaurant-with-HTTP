@@ -1,5 +1,12 @@
 package restaurant.server.handlers;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sun.net.httpserver.HttpExchange;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
 public class Request {
     private String requestParam;
     private String requestArgs;
@@ -26,6 +33,16 @@ public class Request {
         } else {
             requestParam = "";
             requestArgs = "";
+        }
+    }
+
+    public static Request getRequest(HttpExchange exchange) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        if (exchange.getRequestURI().getQuery() == null) {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(exchange.getRequestBody()));
+            return mapper.readValue(reader, Request.class);
+        } else {
+            return new Request(exchange.getRequestURI().getQuery());
         }
     }
 

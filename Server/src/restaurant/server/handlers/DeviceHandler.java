@@ -4,20 +4,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-import restaurant.server.handlers.orders.UnsentOrder;
+import restaurant.intercom.Intercom;
+import restaurant.intercom.orders.UnsentOrder;
 
 import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 
 public class DeviceHandler implements HttpHandler {
+    private static final String SPLITTER = " *: *";
     private final Intercom intercom;
-    private final String splitter = " *: *";
     private final ObjectMapper mapper;
     private Request request;
     private String[] types;
@@ -31,11 +29,10 @@ public class DeviceHandler implements HttpHandler {
     @Override
     public void handle(HttpExchange exchange) throws IOException {
         try {
-            var auth = exchange.getRequestHeaders().get("Authorization").get(0).split("\\s+")[1];
-            var decoded = new String(Base64.getDecoder().decode(auth));
-            types = decoded.split(":", 2)[1].split(" *: *");
-            getRequest(exchange);
-            //System.out.println(request.toString());
+            String auth = exchange.getRequestHeaders().get("Authorization").get(0).split("\\s+")[1];
+            String decoded = new String(Base64.getDecoder().decode(auth));
+            types = decoded.split(":", 2)[1].split(SPLITTER);
+            request = Request.getRequest(exchange);
             switch (exchange.getRequestMethod()) {
                 case "GET" -> get(exchange);
                 case "POST" -> post(exchange);
@@ -48,34 +45,22 @@ public class DeviceHandler implements HttpHandler {
         }
     }
 
-    private void getRequest(HttpExchange exchange) throws Exception {
-        if (exchange.getRequestURI().getQuery() != null) {
-            request = new Request(exchange.getRequestURI().getQuery());
-        } else {
-            var reader = new BufferedReader(new InputStreamReader(exchange.getRequestBody()));
-            request = mapper.readValue(reader, Request.class);
-        }
-    }
-
     private void post(HttpExchange exchange) throws IOException {
         boolean result = true;
-        var writer = new BufferedWriter(new OutputStreamWriter(exchange.getResponseBody()));
         if (request.getRequestParam().equals("message")) {
-            var split = request.getRequestArgs().split(splitter, 2);
+            String[] split = request.getRequestArgs().split(SPLITTER, 2);
             intercom.addMessage(split[0], split[1]);
         } else {
             result = false;
         }
-        exchange.sendResponseHeaders(result ? 200 : 400, String.valueOf(result).length());
-        writer.write(String.valueOf(result));
-        writer.flush();
+        exchange.sendResponseHeaders(result ? 200 : 400, 0);
     }
 
     private void get(HttpExchange exchange) throws IOException {
-        var writer = new BufferedOutputStream(exchange.getResponseBody());
+        BufferedOutputStream writer = new BufferedOutputStream(exchange.getResponseBody());
         byte[] arr = new byte[0];
         if (request.getRequestParam().equals("orders")) {
-            var all = new ArrayList<UnsentOrder>();
+            List<UnsentOrder> all = new ArrayList<>();
             for (String type : types) {
                 all.addAll(intercom.getOrders(type));
             }
@@ -83,7 +68,6 @@ public class DeviceHandler implements HttpHandler {
         }
         exchange.sendResponseHeaders(arr.length > 0 ? 200 : 400, arr.length);
         writer.write(arr);
-        writer.flush();
         writer.close();
     }
 }
